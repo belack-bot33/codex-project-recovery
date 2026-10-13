@@ -1,0 +1,41 @@
+Codex 桌面项目列表恢复（Windows）
+
+适用：项目数据库里有记录，但桌面界面的本地项目缓存缺失。
+不适用：浏览器里的 Codex 云端项目、数据库丢失、账号不同、单纯筛选/加载异常。
+目录存在本身不证明它曾被添加为项目；脚本以本地数据库记录为依据。
+
+解压整个文件夹，保留 recovery.py 和 Recover-CodexProjects.ps1 在同一目录。
+在该目录打开 PowerShell。需要 Python 3.10+，优先使用 Codex 自带的 Python；不需要安装第三方包。
+
+1. 只读诊断：
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Recover-CodexProjects.ps1
+
+2. 修复项目列表：
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Recover-CodexProjects.ps1 -Repair
+
+出现提示后，完全退出 Codex，包括托盘。保留 PowerShell 窗口打开。
+脚本默认等待 30 分钟，不强制终止应用。看到“配置已修复并读回校验”后再重新打开 Codex。
+修复时重新读取最新状态，备份配置和数据库，只补齐项目缓存及项目 ID 映射。
+已有项目、当前设置和数据文件保留。旧目录不存在的项目保留记录并在报告中列出，不新建目录。
+
+3. 可选：恢复旧快照及数据库中的已有聊天关联：
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Recover-CodexProjects.ps1 -Repair -RestoreThreadLinks
+
+4. 可选：同时根据完全相同且唯一的项目根路径推断未关联聊天：
+powershell -NoProfile -ExecutionPolicy Bypass -File .\Recover-CodexProjects.ps1 -Repair -RestoreThreadLinks -InferExactCwd
+这一步是路径推断，并非原始关联证据。默认不开启；不使用父目录猜测；显式无项目的聊天保持不变。
+
+5. 重开应用后，再运行只读诊断，检查缺失数是否归零。
+还需在桌面界面检查项目显示和打开旧聊天。报告不会把配置读回成功当成界面已恢复。
+
+输出默认在脚本旁边的 recovery-results 目录：
+report.json：诊断/修复状态、缺失项目、目录存在情况。
+backup-时间-随机值：修复前配置和数据库的一致性备份。
+备份只用于本机恢复；报告包含本机路径。脚本没有网络请求，不读取 auth.json。
+
+回滚：先完全退出 Codex，将备份目录中的 .codex-global-state.json 复制回对应 CODEX_HOME 目录。
+不要把备份数据库覆盖回去：本脚本没有修改数据库，不需要数据库回滚。
+如果应用升级改变了数据库字段、路径冲突、JSON/数据库损坏，脚本停止，不强行恢复。
+如果意外断电留下 .codex-project-recovery.lock，先确认没有恢复脚本在运行，再删除这个锁文件后重试。
+
+此脚本属于本地修复工具，使用的是已检查的内部配置结构，未来应用版本可能需要更新。
